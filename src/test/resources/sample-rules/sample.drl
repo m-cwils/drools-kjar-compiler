@@ -1,0 +1,17 @@
+package com.example.rules;
+
+import com.example.drools.model.Person;
+
+rule "Mark Adult"
+    when
+        $p : Person(age >= 18)
+    then
+        $p.setAdult(true);
+end
+
+rule "Mark Minor"
+    when
+        $p : Person(age < 18)
+    then
+        $p.setAdult(false);
+end
