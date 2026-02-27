@@ -36,7 +36,7 @@ public class KJarCompiler {
 
     private static final String KMODULE_XML =
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            + "<kmodule xmlns=\"http://jboss.org/kie/6.0.0/kmodule\">\n"
+            + "<kmodule xmlns=\"http://www.drools.org/xsd/kmodule\">\n"
             + "  <kbase name=\"defaultKBase\">\n"
             + "    <ksession name=\"defaultKSession\" type=\"stateless\"/>\n"
             + "  </kbase>\n"
