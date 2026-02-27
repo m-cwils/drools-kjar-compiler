@@ -1,0 +1,19 @@
+package com.example.rules;
+
+expander person.dsl
+
+import com.example.drools.model.Person;
+
+rule "Mark Adult via DSL"
+when
+    there is a person aged 18 or older
+then
+    mark the person as an adult
+end
+
+rule "Mark Minor via DSL"
+when
+    there is a person aged less than 18
+then
+    mark the person as a minor
+end
