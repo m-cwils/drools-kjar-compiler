@@ -88,6 +88,6 @@ mvn test
 ## Notes
 
 - The `kmodule.xml` generated programmatically by `KJarCompiler` defines a single `kbase` that
-  picks up all packages (`packages="**"`) and exposes a `stateless` session named
-  `defaultKSession`.
+  picks up all packages (no `packages` attribute means all packages are included) and exposes a
+  `stateless` session named `defaultKSession`.
 - The JBoss public Maven repository is declared in `pom.xml` to resolve Drools 6.5 artifacts.
