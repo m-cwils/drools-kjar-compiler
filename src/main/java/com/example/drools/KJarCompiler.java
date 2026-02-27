@@ -42,6 +42,20 @@ public class KJarCompiler {
             + "  </kbase>\n"
             + "</kmodule>\n";
 
+    /*
+     * Mitigate the XXE vulnerability present in drools-core <= 7.59.0.Final (including 6.5.x).
+     * The three JAXP system properties below instruct every XML parser in the JVM to refuse
+     * connections to external DTDs, schemas and stylesheets, eliminating the external-entity
+     * resolution path that the vulnerability relies on.  Empty string means "no protocol
+     * allowed" per the JAXP specification (JEP 185 / Java 7u45+).
+     * This static block runs before any Drools class that parses XML is initialised.
+     */
+    static {
+        System.setProperty("javax.xml.accessExternalDTD", "");
+        System.setProperty("javax.xml.accessExternalSchema", "");
+        System.setProperty("javax.xml.accessExternalStylesheet", "");
+    }
+
     /**
      * Entry point for command-line use.
      *

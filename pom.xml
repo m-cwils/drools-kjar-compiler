@@ -62,6 +62,9 @@
             --add-opens java.base/java.text=ALL-UNNAMED
             --add-opens java.desktop/java.awt=ALL-UNNAMED
             --add-opens java.desktop/java.awt.font=ALL-UNNAMED
+            -Djavax.xml.accessExternalDTD=
+            -Djavax.xml.accessExternalSchema=
+            -Djavax.xml.accessExternalStylesheet=
           </argLine>
         </configuration>
       </plugin>
