@@ -61,6 +61,43 @@ public class KJarCompilerTest {
     }
 
     // -----------------------------------------------------------------------
+    // collectRulesFiles
+    // -----------------------------------------------------------------------
+
+    @Test
+    public void collectRulesFiles_findsDslAndDslrFiles() throws Exception {
+        File root = tempFolder.newFolder("dsl-rules");
+        File subDir = new File(root, "sub");
+        subDir.mkdirs();
+
+        File dsl = new File(root, "lang.dsl");
+        File dslr = new File(root, "rules.dslr");
+        File drl = new File(subDir, "extra.drl");
+        File other = new File(root, "readme.txt");
+
+        Files.write(dsl.toPath(), "// dsl".getBytes());
+        Files.write(dslr.toPath(), "// dslr".getBytes());
+        Files.write(drl.toPath(), "// drl".getBytes());
+        Files.write(other.toPath(), "not a rule".getBytes());
+
+        List<File> found = KJarCompiler.collectRulesFiles(root);
+
+        assertEquals("Should find exactly 3 rule files", 3, found.size());
+        assertTrue("Should contain lang.dsl", found.contains(dsl));
+        assertTrue("Should contain rules.dslr", found.contains(dslr));
+        assertTrue("Should contain extra.drl", found.contains(drl));
+        assertFalse("Should not contain readme.txt", found.contains(other));
+    }
+
+    @Test
+    public void collectRulesFiles_emptyDirectory_returnsEmptyList() throws Exception {
+        File root = tempFolder.newFolder("empty-dsl");
+        List<File> found = KJarCompiler.collectRulesFiles(root);
+        assertNotNull(found);
+        assertTrue("Expected empty list for empty directory", found.isEmpty());
+    }
+
+    // -----------------------------------------------------------------------
     // compile
     // -----------------------------------------------------------------------
 
@@ -84,6 +121,36 @@ public class KJarCompilerTest {
     public void compile_folderWithNoDrlFiles_throwsIllegalArgumentException() throws Exception {
         File emptyFolder = tempFolder.newFolder("no-drls");
         KJarCompiler.compile(emptyFolder.getAbsolutePath(), tempFolder.newFile("out.jar").getAbsolutePath());
+    }
+
+    @Test
+    public void compile_dslrRules_producesKJar() throws Exception {
+        String rulesFolder = getSampleDslRulesFolder();
+        File outputJar = new File(tempFolder.getRoot(), "dsl-rules.jar");
+
+        KJarCompiler.compile(rulesFolder, outputJar.getAbsolutePath());
+
+        assertTrue("KJar file should have been created", outputJar.exists());
+        assertTrue("KJar file should not be empty", outputJar.length() > 0);
+    }
+
+    @Test
+    public void kjarLoader_executeDslRules_marksAdultAndMinorCorrectly() throws Exception {
+        String rulesFolder = getSampleDslRulesFolder();
+        File outputJar = new File(tempFolder.getRoot(), "dsl-rules.jar");
+        KJarCompiler.compile(rulesFolder, outputJar.getAbsolutePath());
+
+        KJarLoader loader = new KJarLoader(outputJar.getAbsolutePath());
+        StatelessKieSession session = loader.newStatelessKieSession();
+        assertNotNull("StatelessKieSession should not be null", session);
+
+        Person adult = new Person("Charlie", 25);
+        Person minor = new Person("Dave", 10);
+
+        session.execute(Arrays.asList(adult, minor));
+
+        assertTrue("Charlie (age 25) should be marked as adult", adult.isAdult());
+        assertFalse("Dave (age 10) should not be marked as adult", minor.isAdult());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -134,6 +201,12 @@ public class KJarCompilerTest {
     private String getSampleRulesFolder() {
         URL resource = getClass().getResource("/sample-rules");
         assertNotNull("sample-rules test resource must exist", resource);
+        return new File(resource.getFile()).getAbsolutePath();
+    }
+
+    private String getSampleDslRulesFolder() {
+        URL resource = getClass().getResource("/sample-dsl-rules");
+        assertNotNull("sample-dsl-rules test resource must exist", resource);
         return new File(resource.getFile()).getAbsolutePath();
     }
 }

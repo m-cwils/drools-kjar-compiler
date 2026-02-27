@@ -16,7 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Compiles all .drl files found recursively under a source directory into a KJar file.
+ * Compiles all .drl, .dsl, and .dslr files found recursively under a source directory into a
+ * KJar file.
  *
  * <p>Usage from the command line:
  * <pre>
@@ -59,7 +60,7 @@ public class KJarCompiler {
     /**
      * Entry point for command-line use.
      *
-     * @param args {@code args[0]} – path to the folder containing .drl files;
+     * @param args {@code args[0]} – path to the folder containing rule files (.drl/.dsl/.dslr);
      *             {@code args[1]} – path where the resulting KJar should be written.
      */
     public static void main(String[] args) throws IOException {
@@ -72,13 +73,18 @@ public class KJarCompiler {
     }
 
     /**
-     * Compiles all .drl files found recursively under {@code rulesFolderPath} into a KJar
-     * and writes the resulting JAR bytes to {@code outputJarPath}.
+     * Compiles all .drl, .dsl, and .dslr files found recursively under {@code rulesFolderPath}
+     * into a KJar and writes the resulting JAR bytes to {@code outputJarPath}.
      *
-     * @param rulesFolderPath path to the folder containing .drl source files
+     * <p>.dsl files define the domain-specific language mappings. .dslr files contain rules
+     * written in that domain-specific language (they reference the corresponding .dsl file via
+     * the {@code expander} directive). .drl files are standard Drools rule files.
+     *
+     * @param rulesFolderPath path to the folder containing rule source files
      * @param outputJarPath   destination file for the compiled KJar
-     * @throws IOException              if a .drl file cannot be read or the output cannot be written
-     * @throws IllegalArgumentException if {@code rulesFolderPath} does not exist or is not a directory
+     * @throws IOException              if a rule file cannot be read or the output cannot be written
+     * @throws IllegalArgumentException if {@code rulesFolderPath} does not exist, is not a
+     *                                  directory, or contains no .drl or .dslr files
      * @throws IllegalStateException    if the Drools compilation produces errors
      */
     public static void compile(String rulesFolderPath, String outputJarPath) throws IOException {
@@ -94,16 +100,24 @@ public class KJarCompiler {
         // Write the kmodule.xml descriptor
         kfs.writeKModuleXML(KMODULE_XML);
 
-        // Collect and add all .drl files recursively
-        List<File> drlFiles = collectDrlFiles(rulesFolder);
-        if (drlFiles.isEmpty()) {
-            throw new IllegalArgumentException("No .drl files found under: " + rulesFolderPath);
+        // Collect and add all rules files (DRL, DSL, DSLR) recursively
+        List<File> rulesFiles = collectRulesFiles(rulesFolder);
+        boolean hasRules = false;
+        for (File f : rulesFiles) {
+            String name = f.getName();
+            if (name.endsWith(".drl") || name.endsWith(".dslr")) {
+                hasRules = true;
+                break;
+            }
+        }
+        if (!hasRules) {
+            throw new IllegalArgumentException("No .drl or .dslr files found under: " + rulesFolderPath);
         }
 
-        for (File drl : drlFiles) {
-            String relativePath = rulesFolder.toURI().relativize(drl.toURI()).getPath();
+        for (File file : rulesFiles) {
+            String relativePath = rulesFolder.toURI().relativize(file.toURI()).getPath();
             String kfsPath = "src/main/resources/rules/" + relativePath;
-            byte[] content = Files.readAllBytes(drl.toPath());
+            byte[] content = Files.readAllBytes(file.toPath());
             kfs.write(kfsPath, content);
         }
 
@@ -154,6 +168,36 @@ public class KJarCompiler {
                 collectDrlFilesRecursive(entry, result);
             } else if (entry.getName().endsWith(".drl")) {
                 result.add(entry);
+            }
+        }
+    }
+
+    /**
+     * Recursively collects all rule-related files ({@code .drl}, {@code .dsl}, {@code .dslr})
+     * under the given directory.
+     *
+     * @param directory root directory to search
+     * @return list of rule files (never {@code null})
+     */
+    static List<File> collectRulesFiles(File directory) {
+        List<File> result = new ArrayList<>();
+        collectRulesFilesRecursive(directory, result);
+        return result;
+    }
+
+    private static void collectRulesFilesRecursive(File dir, List<File> result) {
+        File[] entries = dir.listFiles();
+        if (entries == null) {
+            return;
+        }
+        for (File entry : entries) {
+            if (entry.isDirectory()) {
+                collectRulesFilesRecursive(entry, result);
+            } else {
+                String name = entry.getName();
+                if (name.endsWith(".drl") || name.endsWith(".dsl") || name.endsWith(".dslr")) {
+                    result.add(entry);
+                }
             }
         }
     }
